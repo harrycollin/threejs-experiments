@@ -1,0 +1,112 @@
+<!DOCTYPE html>
+<html>
+	<head>
+		<meta charset="utf-8">
+		<title>My first three.js app</title>
+		<style>
+			body { margin: 0; }
+		</style>
+	</head>
+	<body>
+		<script src="js/three.js"></script>
+		<script type="module">
+			const scene = new THREE.Scene();
+			const camera = new THREE.PerspectiveCamera( 75, window.innerWidth / window.innerHeight, 0.1, 1000 );
+
+            // const cubeGeometry = new THREE.BoxGeometry();
+            // const cubeMaterial = new THREE.MeshBasicMaterial( { color: 0x00ff00 } );
+            // const cube = new THREE.Mesh( cubeGeometry, cubeMaterial );
+            // scene.add( cube );
+
+            camera.position.z = 50;
+
+			const renderer = new THREE.WebGLRenderer();
+			renderer.setSize( window.innerWidth, window.innerHeight );
+			document.body.appendChild( renderer.domElement );
+
+            const material = new THREE.PointsMaterial( { 
+                color: 'white',
+                size: 0.1 
+            });
+
+            // Variables
+            const geometry = new THREE.BufferGeometry();
+            const vertices = []
+            let particles;
+           
+            const createPoint = function (x, y) {
+                vertices.push(x, y, 0)
+                const points = new Float32Array(vertices);
+                geometry.setAttribute( 'position', new THREE.BufferAttribute( points, 3 ) );
+            }
+
+            const updateGeometry = function () {
+                particles = new THREE.Points( geometry, material );
+            }
+
+			const animate = function () {
+				requestAnimationFrame( animate );
+				renderer.render( scene, camera );
+			};
+
+            // Function to generate random number 
+            function randomNumber(min, max) { 
+                return Math.random() * (max - min) + min;
+            } 
+
+            function getPointInBetweenByPerc(pointA, pointB, percentage) {
+                var dir = pointB.clone().sub(pointA);
+                var len = dir.length();
+                dir = dir.normalize().multiplyScalar(len*percentage);
+                return pointA.clone().add(dir);
+            }
+
+            const sleep = (time) => {
+                return new Promise(resolve => setTimeout(resolve, time))
+            }
+
+            // Plot original points
+            const r = 20
+
+            const c = new THREE.Vector3(0.0, 1.0 * r);
+            const b = new THREE.Vector3(0.866, -0.5).multiplyScalar(r);
+            const a = new THREE.Vector3(-0.866, -0.5).multiplyScalar(r);
+         
+            createPoint(a.x, a.y);
+            createPoint(b.x, b.y);
+            createPoint(c.x, c.y);
+            updateGeometry();
+
+            scene.add(particles);
+			animate();
+
+            // Can be anything
+            const startPoint = new THREE.Vector3(0, 0);
+            let prevPoint = startPoint;
+
+            for(let i = 0; i < 100000; i++){
+
+                if(i % 100 == 0){
+                    await sleep(1);
+                }
+
+                const roll = Math.floor(randomNumber(1, 6));
+
+                let x;
+
+                if(roll <= 2){
+                    x = a;
+                }else if(roll <= 4){
+                    x = b;
+                }else if(roll <= 6){
+                    x = c;
+                }
+
+                const p = getPointInBetweenByPerc(x, prevPoint, 0.5);
+                prevPoint = p;
+                createPoint(p.x, p.y);
+                updateGeometry();
+            }
+		</script>
+	</body>
+</html>
