@@ -12,6 +12,7 @@
 		<script type="module">
 
             import { TrackballControls } from 'https://cdn.skypack.dev/three@0.129/examples/jsm/controls/TrackballControls.js';
+			import { GUI } from 'https://cdn.skypack.dev/three@0.129/examples/jsm/libs/dat.gui.module.js';
 
 			const scene = new THREE.Scene();
             const camera = new THREE.OrthographicCamera(
@@ -81,21 +82,7 @@
             renderer.domElement.addEventListener('wheel', mousewheel, false);
 
             // Variables
-            const geometry = new THREE.BufferGeometry();
-            const vertices = []
-            let particles;
-           
-            const createPoint = function (x, y) {
-                vertices.push(x, y, 0)
-            }
-
-            const updateGeometry = function () {
-                const points = new Float32Array(vertices);
-                geometry.setAttribute( 'position', new THREE.BufferAttribute( points, 3 ) );
-                particles = new THREE.Points( geometry, material );
-            }
-
-			const animate = function () {
+            const animate = function () {
 				requestAnimationFrame( animate );
 				renderer.render( scene, camera );
 			};
@@ -107,7 +94,7 @@
             const getPointInBetweenByPerc = (pointA, pointB, percentage) => {
                 var dir = pointB.clone().sub(pointA);
                 var len = dir.length();
-                dir = dir.normalize().multiplyScalar(len*percentage);
+                dir = dir.normalize().multiplyScalar(len * percentage);
                 return pointA.clone().add(dir);
             }
 
@@ -116,42 +103,82 @@
             }
 
             // Plot original points
-            const points = [];
-            const radius = 20;
-            const segments = 3;
+            const params = {
+                radius: 20,
+                segments: 3,
+                scalar: 0.5,
+                iterations: 500000
+            }
+
             const thetaStart = Math.PI / 2;
             const thetaLength = Math.PI * 2;
 
-            for(let i = 0; i <= segments; i++){
-                const segment = thetaStart + i / segments * thetaLength;
-                const x = Math.cos(segment) * radius;
-                const y = Math.sin(segment) * radius;
-                points.push(new THREE.Vector3(x, y, 0))
-                createPoint(x, y);
-            }
+            let cancel = false;
 
-            updateGeometry();
-            scene.add(particles);
-			animate();
+            let particles = new THREE.Points();
 
-            // Can be anything
-            const startPoint = new THREE.Vector3(233983, 4324234);
-            let prevPoint = startPoint;
+            const generate = async function(){
+                
+                let geometry = new THREE.BufferGeometry();
+                const vertices = [];;
+                const points = [];
 
-            for(let i = 0; i < 5000000; i++){
+                scene.remove(particles)
 
-                if(i % 100000 == 0){
-                    await sleep(10);
-                    updateGeometry();
+                const updateGeometry = function () {
+                    const points = new Float32Array(vertices);
+                    geometry.setAttribute( 'position', new THREE.BufferAttribute( points, 3 ) );
+                    particles = new THREE.Points(geometry, material);
                 }
 
-                const roll = Math.floor(randomNumber(0, points.length - 1));
-                const p = getPointInBetweenByPerc(points[roll], prevPoint, 0.5);
-                prevPoint = p;
-                createPoint(p.x, p.y);
+                cancel = true;
+
+                for(let i = 0; i <= params.segments; i++){
+                    const segment = thetaStart + i / params.segments * thetaLength;
+                    const x = Math.cos(segment) * params.radius;
+                    const y = Math.sin(segment) * params.radius;
+                    points.push(new THREE.Vector3(x, y, 0))
+                    vertices.push(x, y, 0)
+                }
+
+                // Can be anything
+                const startPoint = new THREE.Vector3(0, 0);
+                let prevPoint = startPoint;
+
+                cancel = false;
+
+                for(let i = 0; i < params.iterations; i++){
+
+                    if(cancel)
+                        return
+
+                    // if(i % 10000 == 0){
+                    //     await sleep(1);
+                    //     updateGeometry();
+                    // }
+
+                    const roll = Math.floor(randomNumber(0, points.length - 1));
+                    const p = getPointInBetweenByPerc(points[roll], prevPoint, params.scalar);
+                    prevPoint = p;
+                    vertices.push(p.x, p.y, 0);
+                }
+
+                updateGeometry();
+
+                scene.add(particles);
             }
 
-            updateGeometry();
+            const gui = new GUI();
+            gui.add( params, 'radius', 1, 50, 1 ).onChange( generate );
+            gui.add( params, 'segments', 3, 100, 1 ).onChange( generate );
+            gui.add( params, 'scalar', 0.01, 1, 0.01).onChange( generate );
+            gui.add( params, 'iterations', 1000, 10000000, 1000).onChange( generate );
+
+            generate();
+
+
+            animate();
+
 		</script>
 	</body>
 </html>
