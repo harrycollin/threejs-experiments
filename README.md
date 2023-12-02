@@ -1,3 +1,3 @@
-# threejs-fractals
+# threejs-experiments
 
-Demo: https://harrycollin.github.io/threejs-fractals/
+Demo: https://harrycollin.github.io/threejs-experiments/
